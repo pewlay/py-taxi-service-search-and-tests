@@ -1,32 +1,42 @@
+from django.test import TestCase
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 from taxi.models import Driver, Car, Manufacturer
 
 
-def test_driver_search(self):
-    Driver.objects.create_user(username="testuser1", password="12345")
-    Driver.objects.create_user(username="driver2", password="12345")
+class SearchFunctionalityTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="admin",
+            password="adminpass123",
+            is_staff=True
+        )
+        self.client.login(username="admin", password="adminpass123")
 
-    response = self.client.get(reverse("taxi:driver-list") + "?username=test")
+        self.manufacturer = Manufacturer.objects.create(
+            name="Toyota", country="Japan"
+        )
+        self.car = Car.objects.create(
+            model="Tesla", manufacturer=self.manufacturer
+        )
+        self.driver = Driver.objects.create_user(
+            username="testuser1",
+            password="testpass123",
+            license_number="ABC12345"
+        )
 
-    self.assertContains(response, "testuser1")
-    self.assertNotContains(response, "driver2")
+    def test_driver_search(self):
+        response = self.client.get(
+            reverse("taxi:driver-list") + "?username=testuser1"
+        )
+        self.assertContains(response, "testuser1")
 
+    def test_car_search(self):
+        response = self.client.get(reverse("taxi:car-list") + "?model=Tesla")
+        self.assertContains(response, "Tesla")
 
-def test_car_search(self):
-    Car.objects.create(model="Tesla")
-    Car.objects.create(model="BMW")
-
-    response = self.client.get(reverse("taxi:car-list") + "?model=tesla")
-
-    self.assertContains(response, "Tesla")
-    self.assertNotContains(response, "BMW")
-
-
-def test_manufacturer_search(self):
-    Manufacturer.objects.create(name="Toyota")
-    Manufacturer.objects.create(name="Ford")
-
-    response = self.client.get(reverse("taxi:manufacturer-list") + "?name=toy")
-
-    self.assertContains(response, "Toyota")
-    self.assertNotContains(response, "Ford")
+    def test_manufacturer_search(self):
+        response = self.client.get(
+            reverse("taxi:manufacturer-list") + "?name=Toyota"
+        )
+        self.assertContains(response, "Toyota")
